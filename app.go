@@ -1,3 +1,5 @@
+package gomobile_t1
+
 // Copyright 2015 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
@@ -6,7 +8,6 @@
 
 // Flappy Gopher is a simple one-button game that uses the
 // mobile framework and the experimental sprite engine.
-package main
 
 import (
 	"math/rand"
@@ -25,10 +26,20 @@ import (
 	"golang.org/x/mobile/gl"
 )
 
-func main() {
-	rand.Seed(time.Now().UnixNano())
+// GoApp is for gomobile
+type GoApp interface {
+	onPaint(gl.Context, size.Event)
+	onTouch(touch.Event)
+	onKey(key.Event)
+}
 
-	app.Main(func(a app.App) {
+func StartGoApp(ga GoApp, seed int64) {
+	if seed == 0 {
+		seed = time.Now().UnixNano()
+	}
+	rand.Seed(seed)
+
+	app.Main(func (a app.App) {
 		var glctx gl.Context
 		var sz size.Event
 		for e := range a.Events() {
@@ -50,25 +61,17 @@ func main() {
 				if glctx == nil || e.External {
 					continue
 				}
-				onPaint(glctx, sz)
+				ga.onPaint(glctx, sz)
 				a.Publish()
 				a.Send(paint.Event{}) // keep animating
 			case touch.Event:
-				if down := e.Type == touch.TypeBegin; down || e.Type == touch.TypeEnd {
-					game.Press(down)
-				}
+				ga.onTouch(e)
 			case key.Event:
-				if e.Code != key.CodeSpacebar {
-					break
-				}
-				if down := e.Direction == key.DirPress; down || e.Direction == key.DirRelease {
-					game.Press(down)
-				}
+				ga.onKey(e)
 			}
 		}
-	})
+	})})
 }
-
 var (
 	startTime = time.Now()
 	images    *glutil.Images
